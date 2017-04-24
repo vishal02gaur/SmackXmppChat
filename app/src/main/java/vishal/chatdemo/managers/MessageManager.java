@@ -17,6 +17,7 @@ import vishal.chatdemo.BuildConfig;
 import vishal.chatdemo.Constants;
 import vishal.chatdemo.State;
 import vishal.chatdemo.messages.MessageObj;
+import vishal.chatdemo.messages.TextMessage;
 
 /**
  * Author : Vishal Gaur
@@ -24,7 +25,7 @@ import vishal.chatdemo.messages.MessageObj;
  * Date   : 24/4/17
  */
 
-public class MessageManager {
+public class MessageManager implements XMPPConnectionManager.OnMessageReceiveListener {
     private static String TAG = MessageManager.class.getSimpleName();
     private BlockingQueue<MessageObj> mMessageObjQueue;
     private List<MessageObj> messageObjList;
@@ -40,6 +41,7 @@ public class MessageManager {
     private MessageManager() {
         mMessageObjQueue = new LinkedBlockingQueue<MessageObj>();
         messageObjList = new ArrayList<>();
+        XMPPConnectionManager.getXmppConnectionManager().setListener(this);
         thread = new Thread(queueController);
         thread.start();
     }
@@ -101,5 +103,13 @@ public class MessageManager {
         }
 
     }
+
+    @Override
+    public void onMessageReceived(Message message) {
+        MessageObj messageObj = new TextMessage(message.getStanzaId(), message.getTo().asBareJid().toString(), message.getFrom().asBareJid().toString(), State.RECEIVED, message.getBody(), System.currentTimeMillis());
+        //int index = messageObjList.indexOf(messageObj);
+        messageObjList.add(messageObj);
+    }
+
 
 }

@@ -44,6 +44,11 @@ public class XMPPConnectionManager implements IncomingChatMessageListener, Conne
 
     private AbstractXMPPConnection connection;
     private ChatManager chatManager;
+    private OnMessageReceiveListener listener;
+
+    interface OnMessageReceiveListener {
+        public void onMessageReceived(Message message);
+    }
 
     public static void initXMPPConnectionManager(String username, String password) throws XmppStringprepException {
 
@@ -89,6 +94,10 @@ public class XMPPConnectionManager implements IncomingChatMessageListener, Conne
         return xmppConnectionManager;
     }
 
+    void setListener(OnMessageReceiveListener listener) {
+        this.listener = listener;
+    }
+
     public void connect() throws InterruptedException, XMPPException, SmackException, IOException {
         connection.connect();
         connection.login();
@@ -97,7 +106,7 @@ public class XMPPConnectionManager implements IncomingChatMessageListener, Conne
 
     }
 
-    public boolean sendMessage(Message message) throws XmppStringprepException, SmackException.NotConnectedException, InterruptedException {
+    boolean sendMessage(Message message) throws XmppStringprepException, SmackException.NotConnectedException, InterruptedException {
         if (connection.isConnected() && connection.isAuthenticated()) {
             EntityBareJid jid = JidCreate.entityBareFrom(message.getTo());
             Chat chat = chatManager.chatWith(jid);
@@ -116,6 +125,8 @@ public class XMPPConnectionManager implements IncomingChatMessageListener, Conne
     public void newIncomingMessage(EntityBareJid from, Message message, Chat chat) {
         Log.d(TAG, "RECEIVED MESSAGE............");
         Log.d(TAG, message.toXML().toString());
+        if (listener != null)
+            listener.onMessageReceived(message);
     }
 
 

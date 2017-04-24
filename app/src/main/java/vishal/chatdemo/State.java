@@ -12,10 +12,11 @@ import android.support.annotation.IntDef;
  * Email  : vishal02gaur@gmail.com
  * Date   : 24/4/17
  */
-@IntDef({State.SENDING, State.SENT, State.FAILED})
+@IntDef({State.SENDING, State.SENT, State.FAILED, State.RECEIVED})
 @Retention(RetentionPolicy.SOURCE)
 public @interface State {
     int SENDING = 1;
     int SENT = 2;
     int FAILED = 3;
+    int RECEIVED = 4;
 }
