@@ -57,6 +57,10 @@ public class ChatMessageManager {
         mMessageObjQueue.offer(messageObj);
     }
 
+    public void retry(MessageObj messageObj){
+        mMessageObjQueue.offer(messageObj);
+    }
+
     public List<MessageObj> getMessageObjList() {
         return messageObjList;
     }
@@ -98,14 +102,24 @@ public class ChatMessageManager {
             XMPPConnectionManager.getXmppConnectionManager().sendMessage(message);
         } catch (SmackException.NotConnectedException e) {
             e.printStackTrace();
+            getObject(message,State.FAILED);
+            EventBus.getDefault().post(new MessageEvent(message));
         } catch (InterruptedException e) {
             e.printStackTrace();
+            getObject(message,State.FAILED);
+            EventBus.getDefault().post(new MessageEvent(message));
         } catch (XMPPException e) {
             e.printStackTrace();
+            getObject(message,State.FAILED);
+            EventBus.getDefault().post(new MessageEvent(message));
         } catch (IOException e) {
             e.printStackTrace();
+            getObject(message,State.FAILED);
+            EventBus.getDefault().post(new MessageEvent(message));
         } catch (SmackException e) {
             e.printStackTrace();
+            getObject(message,State.FAILED);
+            EventBus.getDefault().post(new MessageEvent(message));
         }
     }
 
@@ -113,14 +127,19 @@ public class ChatMessageManager {
     public void onMessageEvent(Message message) {
         MessageObj messageObj;
         if (message.getFrom() == null) {
-            messageObj = new TextMessage(message.getStanzaId(), message.getTo().asBareJid().toString(), Constants.FROM, State.SENT, message.getBody(), System.currentTimeMillis());
-            int index = messageObjList.indexOf(messageObj);
-            messageObjList.get(index).setState(State.SENT);
+            messageObj = getObject(message,State.SENT);
         } else {
             messageObj = new TextMessage(message.getStanzaId(), message.getTo().asBareJid().toString(), message.getFrom().asBareJid().toString(), State.RECEIVED, message.getBody(), System.currentTimeMillis());
             messageObjList.add(messageObj);
         }
         EventBus.getDefault().post(new MessageEvent(message));
+    }
+
+    private MessageObj getObject(Message message, int state) {
+        MessageObj messageObj = new TextMessage(message.getStanzaId(), message.getTo().asBareJid().toString(), Constants.FROM, State.SENT, message.getBody(), System.currentTimeMillis());
+        int index = messageObjList.indexOf(messageObj);
+        messageObjList.get(index).setState(state);
+        return messageObj;
     }
 
 }

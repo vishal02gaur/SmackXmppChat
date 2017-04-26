@@ -19,7 +19,7 @@ import vishal.chatdemo.managers.ChatMessageManager;
 import vishal.chatdemo.messages.MessageObj;
 import vishal.chatdemo.messages.TextMessage;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener ,ChatAdapter.OnChatClickListener {
 
 
     private RecyclerView mChatRecyclerView;
@@ -53,12 +53,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onResume() {
         super.onResume();
         EventBus.getDefault().register(this);
+        chatAdapter.setClickListener(this);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         EventBus.getDefault().unregister(this);
+        chatAdapter.setClickListener(null);
     }
 
     private void sendMessage(String msg) {
@@ -85,6 +87,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onMessageReceived(MessageEvent messageEvent) {
+        chatAdapter.notifyDataSetChanged();
+    }
+
+    @Override
+    public void onRetry(MessageObj messageObj) {
+        messageObj.setState(State.SENDING);
+        ChatMessageManager.getMessageManager().retry(messageObj);
         chatAdapter.notifyDataSetChanged();
     }
 }

@@ -21,9 +21,19 @@ import vishal.chatdemo.messages.MessageObj;
 
 public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
     private List<MessageObj> list;
+    private OnChatClickListener clickListener;
+
+
+    public interface OnChatClickListener {
+        public void onRetry(MessageObj messageObj);
+    }
 
     public ChatAdapter(List<MessageObj> list) {
         this.list = list;
+    }
+
+    public void setClickListener(OnChatClickListener clickListener) {
+        this.clickListener = clickListener;
     }
 
     @Override
@@ -104,7 +114,8 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
             MessageObj messageObj = list.get(getAdapterPosition());
             switch (messageObj.getState()) {
                 case State.FAILED:
-
+                    if (clickListener != null)
+                        clickListener.onRetry(messageObj);
                     break;
             }
 
