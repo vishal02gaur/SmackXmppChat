@@ -2,12 +2,17 @@ package vishal.chatdemo.managers;
 
 import android.util.Log;
 
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 import org.jivesoftware.smack.SmackException;
+import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.packet.Message;
 import org.jxmpp.jid.EntityBareJid;
 import org.jxmpp.jid.impl.JidCreate;
 import org.jxmpp.stringprep.XmppStringprepException;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -15,6 +20,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import vishal.chatdemo.BuildConfig;
 import vishal.chatdemo.Constants;
+import vishal.chatdemo.MessageEvent;
 import vishal.chatdemo.State;
 import vishal.chatdemo.messages.MessageObj;
 import vishal.chatdemo.messages.TextMessage;
@@ -25,25 +31,25 @@ import vishal.chatdemo.messages.TextMessage;
  * Date   : 24/4/17
  */
 
-public class MessageManager implements XMPPConnectionManager.OnMessageReceiveListener {
-    private static String TAG = MessageManager.class.getSimpleName();
+public class ChatMessageManager {
+    private static String TAG = ChatMessageManager.class.getSimpleName();
     private BlockingQueue<MessageObj> mMessageObjQueue;
     private List<MessageObj> messageObjList;
     private Thread thread;
-    private static MessageManager messageManager;
+    private static ChatMessageManager messageManager;
 
-    public static MessageManager getMessageManager() {
+    public static ChatMessageManager getMessageManager() {
         if (messageManager == null)
-            messageManager = new MessageManager();
+            messageManager = new ChatMessageManager();
         return messageManager;
     }
 
-    private MessageManager() {
+    private ChatMessageManager() {
         mMessageObjQueue = new LinkedBlockingQueue<MessageObj>();
         messageObjList = new ArrayList<>();
-        XMPPConnectionManager.getXmppConnectionManager().setListener(this);
         thread = new Thread(queueController);
         thread.start();
+        EventBus.getDefault().register(this);
     }
 
     public void addMessage(MessageObj messageObj) {
@@ -84,32 +90,37 @@ public class MessageManager implements XMPPConnectionManager.OnMessageReceiveLis
         message.setStanzaId(messageObj.get_id());
         message.setTo(_tojid);
         message.setFrom(_fromjid);
-        message.setType(Message.Type.normal);
+        message.setType(Message.Type.chat);
         message.setBody(messageObj.getMsg());
 
-        try {
-            boolean isSend = XMPPConnectionManager.getXmppConnectionManager().sendMessage(message);
-            if (isSend == true)
-                messageObj.setState(State.SENT);
-            else
-                messageObj.setState(State.FAILED);
 
+        try {
+            XMPPConnectionManager.getXmppConnectionManager().sendMessage(message);
         } catch (SmackException.NotConnectedException e) {
             e.printStackTrace();
-            messageObj.setState(State.FAILED);
         } catch (InterruptedException e) {
             e.printStackTrace();
-            messageObj.setState(State.FAILED);
+        } catch (XMPPException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (SmackException e) {
+            e.printStackTrace();
         }
-
     }
 
-    @Override
-    public void onMessageReceived(Message message) {
-        MessageObj messageObj = new TextMessage(message.getStanzaId(), message.getTo().asBareJid().toString(), message.getFrom().asBareJid().toString(), State.RECEIVED, message.getBody(), System.currentTimeMillis());
-        //int index = messageObjList.indexOf(messageObj);
-        messageObjList.add(messageObj);
+    @Subscribe(threadMode = ThreadMode.BACKGROUND)
+    public void onMessageEvent(Message message) {
+        MessageObj messageObj;
+        if (message.getFrom() == null) {
+            messageObj = new TextMessage(message.getStanzaId(), message.getTo().asBareJid().toString(), Constants.FROM, State.SENT, message.getBody(), System.currentTimeMillis());
+            int index = messageObjList.indexOf(messageObj);
+            messageObjList.get(index).setState(State.SENT);
+        } else {
+            messageObj = new TextMessage(message.getStanzaId(), message.getTo().asBareJid().toString(), message.getFrom().asBareJid().toString(), State.RECEIVED, message.getBody(), System.currentTimeMillis());
+            messageObjList.add(messageObj);
+        }
+        EventBus.getDefault().post(new MessageEvent(message));
     }
-
 
 }

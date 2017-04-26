@@ -51,8 +51,7 @@ public abstract class MessageObj {
         MessageObj that = (MessageObj) o;
 
         if (_id != null ? !_id.equals(that._id) : that._id != null) return false;
-        if (_to != null ? !_to.equals(that._to) : that._to != null) return false;
-        return _from != null ? _from.equals(that._from) : that._from == null;
+        return _to != null ? _to.equals(that._to) : that._to == null;
 
     }
 
@@ -60,7 +59,6 @@ public abstract class MessageObj {
     public int hashCode() {
         int result = _id != null ? _id.hashCode() : 0;
         result = 31 * result + (_to != null ? _to.hashCode() : 0);
-        result = 31 * result + (_from != null ? _from.hashCode() : 0);
         return result;
     }
 }
