@@ -3,18 +3,13 @@ package vishal.chatdemo.managers;
 import android.util.Log;
 
 import org.greenrobot.eventbus.EventBus;
-import org.jivesoftware.smack.AbstractXMPPConnection;
-import org.jivesoftware.smack.ConnectionListener;
-import org.jivesoftware.smack.ExceptionCallback;
 import org.jivesoftware.smack.ReconnectionManager;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.XMPPConnection;
 import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.chat2.Chat;
-import org.jivesoftware.smack.chat2.ChatManager;
 import org.jivesoftware.smack.chat2.IncomingChatMessageListener;
-import org.jivesoftware.smack.chat2.OutgoingChatMessageListener;
 import org.jivesoftware.smack.filter.StanzaFilter;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Stanza;
@@ -22,19 +17,13 @@ import org.jivesoftware.smack.provider.ProviderManager;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
-import org.jivesoftware.smackx.receipts.DeliveryReceiptManager;
-import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
-import org.jivesoftware.smackx.receipts.ReceiptReceivedListener;
 import org.jxmpp.jid.EntityBareJid;
-import org.jxmpp.jid.Jid;
-import org.jxmpp.jid.impl.JidCreate;
 import org.jxmpp.stringprep.XmppStringprepException;
 
 import java.io.IOException;
-import java.util.Random;
 
-import vishal.chatdemo.Constants;
-import vishal.chatdemo.XmppConfigNullPointerException;
+import vishal.chatdemo.messages.ext.MessageExtension;
+
 
 /**
  * Author : Vishal Gaur
@@ -58,7 +47,7 @@ public class XMPPConnectionManager implements IncomingChatMessageListener, Stanz
         if (packet instanceof Message) {
             Log.d(TAG, "RECEIVED MESSAGE............");
             Log.d(TAG, packet.toXML().toString());
-            EventBus.getDefault().post((Message)packet);
+            EventBus.getDefault().post((Message) packet);
         }
     }
 
@@ -91,6 +80,9 @@ public class XMPPConnectionManager implements IncomingChatMessageListener, Stanz
         connection.setPacketReplyTimeout(10000);
         ReconnectionManager.getInstanceFor(connection).enableAutomaticReconnection();
 
+        ProviderManager.addExtensionProvider(MessageExtension.ELEMENT, MessageExtension.NAMESPACE, new MessageExtension.Provider());
+
+
     }
 
     public static XMPPConnectionManager getXmppConnectionManager() {
@@ -113,7 +105,7 @@ public class XMPPConnectionManager implements IncomingChatMessageListener, Stanz
             connect();
         }
         if (connection.isConnected() && connection.isAuthenticated()) {
-            DeliveryReceiptRequest.addTo(message);
+          //  DeliveryReceiptRequest.addTo(message);
             connection.sendStanza(message);
         }
     }

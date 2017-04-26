@@ -12,9 +12,9 @@ import android.widget.EditText;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
-import org.jivesoftware.smack.packet.Message;
 
 import vishal.chatdemo.adapters.ChatAdapter;
+import vishal.chatdemo.events.MessageEvent;
 import vishal.chatdemo.managers.ChatMessageManager;
 import vishal.chatdemo.messages.MessageObj;
 import vishal.chatdemo.messages.TextMessage;

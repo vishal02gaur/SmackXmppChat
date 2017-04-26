@@ -20,10 +20,12 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import vishal.chatdemo.BuildConfig;
 import vishal.chatdemo.Constants;
-import vishal.chatdemo.MessageEvent;
+import vishal.chatdemo.events.MessageEvent;
 import vishal.chatdemo.State;
 import vishal.chatdemo.messages.MessageObj;
 import vishal.chatdemo.messages.TextMessage;
+import vishal.chatdemo.messages.ext.ImageMessageExt;
+import vishal.chatdemo.messages.ext.TextMessageExt;
 
 /**
  * Author : Vishal Gaur
@@ -57,7 +59,7 @@ public class ChatMessageManager {
         mMessageObjQueue.offer(messageObj);
     }
 
-    public void retry(MessageObj messageObj){
+    public void retry(MessageObj messageObj) {
         mMessageObjQueue.offer(messageObj);
     }
 
@@ -96,30 +98,38 @@ public class ChatMessageManager {
         message.setFrom(_fromjid);
         message.setType(Message.Type.chat);
         message.setBody(messageObj.getMsg());
-
+        TextMessageExt textMessageExt = new TextMessageExt();
+        ImageMessageExt imageMessageExt = new ImageMessageExt();
+        imageMessageExt.setImageUrl("https://www.android.com/static/2016/img/hero-carousel/android-nougat.png");
+        message.addExtension(imageMessageExt);
+        /*
+        TextMessageExtension extension = new TextMessageExtension();
+       // ImageMessageExtension imageMessageExt = new ImageMessageExtension();
+       // imageMessageExt.setImageUrl("https://www.android.com/static/2016/img/hero-carousel/android-nougat.png");
+        message.addExtension(extension);
+       // message.addExtension(imageMessageExt);*/
 
         try {
             XMPPConnectionManager.getXmppConnectionManager().sendMessage(message);
         } catch (SmackException.NotConnectedException e) {
             e.printStackTrace();
-            getObject(message,State.FAILED);
-            EventBus.getDefault().post(new MessageEvent(message));
+            EventBus.getDefault().post(new MessageEvent(getObject(message, State.FAILED)));
         } catch (InterruptedException e) {
             e.printStackTrace();
-            getObject(message,State.FAILED);
-            EventBus.getDefault().post(new MessageEvent(message));
+            getObject(message, State.FAILED);
+            EventBus.getDefault().post(new MessageEvent(getObject(message, State.FAILED)));
         } catch (XMPPException e) {
             e.printStackTrace();
-            getObject(message,State.FAILED);
-            EventBus.getDefault().post(new MessageEvent(message));
+            getObject(message, State.FAILED);
+            EventBus.getDefault().post(new MessageEvent(getObject(message, State.FAILED)));
         } catch (IOException e) {
             e.printStackTrace();
-            getObject(message,State.FAILED);
-            EventBus.getDefault().post(new MessageEvent(message));
+            getObject(message, State.FAILED);
+            EventBus.getDefault().post(new MessageEvent(getObject(message, State.FAILED)));
         } catch (SmackException e) {
             e.printStackTrace();
-            getObject(message,State.FAILED);
-            EventBus.getDefault().post(new MessageEvent(message));
+            getObject(message, State.FAILED);
+            EventBus.getDefault().post(new MessageEvent(getObject(message, State.FAILED)));
         }
     }
 
@@ -127,12 +137,22 @@ public class ChatMessageManager {
     public void onMessageEvent(Message message) {
         MessageObj messageObj;
         if (message.getFrom() == null) {
-            messageObj = getObject(message,State.SENT);
+            messageObj = getObject(message, State.SENT);
         } else {
+
+            /*List<ExtensionElement> extensionList = message.getExtensions();
+            for (ExtensionElement element : extensionList) {
+                if (element instanceof TextMessageExtension) {
+                    Log.d(TAG, "received " + "TextMessageExtensionExtension");
+                } else if (element instanceof ImageMessageExtension) {
+                    Log.d(TAG, "received " + "ImageMessageExtensionExtension " + ((ImageMessageExtension) element).getImageUrl());
+                }
+            }
+*/
             messageObj = new TextMessage(message.getStanzaId(), message.getTo().asBareJid().toString(), message.getFrom().asBareJid().toString(), State.RECEIVED, message.getBody(), System.currentTimeMillis());
             messageObjList.add(messageObj);
         }
-        EventBus.getDefault().post(new MessageEvent(message));
+        EventBus.getDefault().post(new MessageEvent(messageObj));
     }
 
     private MessageObj getObject(Message message, int state) {
