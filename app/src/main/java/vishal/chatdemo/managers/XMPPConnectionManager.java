@@ -3,6 +3,7 @@ package vishal.chatdemo.managers;
 import android.util.Log;
 
 import org.greenrobot.eventbus.EventBus;
+import org.jivesoftware.smack.ConnectionConfiguration;
 import org.jivesoftware.smack.ReconnectionManager;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.StanzaListener;
@@ -12,16 +13,38 @@ import org.jivesoftware.smack.chat2.Chat;
 import org.jivesoftware.smack.chat2.IncomingChatMessageListener;
 import org.jivesoftware.smack.filter.StanzaFilter;
 import org.jivesoftware.smack.packet.Message;
+import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.provider.ProviderManager;
+import org.jivesoftware.smack.roster.PresenceEventListener;
+import org.jivesoftware.smack.roster.Roster;
+import org.jivesoftware.smack.roster.RosterEntries;
+import org.jivesoftware.smack.roster.RosterListener;
+import org.jivesoftware.smack.roster.SubscribeListener;
+import org.jivesoftware.smack.roster.provider.RosterPacketProvider;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
+import org.jivesoftware.smackx.chatstates.ChatStateManager;
+import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
+import org.jivesoftware.smackx.disco.ServiceDiscoveryManager;
+import org.jivesoftware.smackx.iqlast.packet.LastActivity;
+import org.jivesoftware.smackx.muc.MUCAffiliation;
+import org.jivesoftware.smackx.muc.MultiUserChatManager;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
+import org.jivesoftware.smackx.receipts.DeliveryReceiptManager;
+import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
+import org.jivesoftware.smackx.receipts.ReceiptReceivedListener;
 import org.jxmpp.jid.EntityBareJid;
+import org.jxmpp.jid.Jid;
 import org.jxmpp.stringprep.XmppStringprepException;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.List;
 
+import vishal.chatdemo.Constants;
+import vishal.chatdemo.events.ReceiptEvent;
 import vishal.chatdemo.messages.ext.MessageExtension;
 
 
@@ -53,12 +76,22 @@ public class XMPPConnectionManager implements IncomingChatMessageListener, Stanz
 
     public static void initXMPPConnectionManager(String username, String password) throws XmppStringprepException {
 
+        InetAddress inetAddress = null;
+        try {
+            inetAddress = InetAddress.getByName(Constants.HOST_IP);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+
         xmppConfig = XMPPTCPConnectionConfiguration.builder()
                 .setUsernameAndPassword(username, password)
-                .setXmppDomain("@xmpp.jp")
+                .setXmppDomain(Constants.XMPP_DOMAIN)
                 .setKeystoreType(null)
                 .setDebuggerEnabled(true)
-                /*.setHost(xmppDomain)*/
+                .setSecurityMode(ConnectionConfiguration.SecurityMode.disabled)
+                .setHost(Constants.HOST_IP)
+                .setHostAddress(inetAddress)
+                .setCompressionEnabled(false)
                 .setPort(5222)
                 .build();
 
@@ -105,7 +138,7 @@ public class XMPPConnectionManager implements IncomingChatMessageListener, Stanz
             connect();
         }
         if (connection.isConnected() && connection.isAuthenticated()) {
-          //  DeliveryReceiptRequest.addTo(message);
+            DeliveryReceiptRequest.addTo(message);
             connection.sendStanza(message);
         }
     }
@@ -126,7 +159,7 @@ public class XMPPConnectionManager implements IncomingChatMessageListener, Stanz
         @Override
         public void connected(XMPPConnection mconnection) {
             Log.d(TAG, "connected");
-           /* ProviderManager.addExtensionProvider(DeliveryReceipt.ELEMENT, DeliveryReceipt.NAMESPACE, new DeliveryReceipt.Provider());
+            ProviderManager.addExtensionProvider(DeliveryReceipt.ELEMENT, DeliveryReceipt.NAMESPACE, new DeliveryReceipt.Provider());
             ProviderManager.addExtensionProvider(DeliveryReceiptRequest.ELEMENT, new DeliveryReceiptRequest().getNamespace(), new DeliveryReceiptRequest.Provider());
 
             DeliveryReceiptManager.getInstanceFor(connection).addReceiptReceivedListener(new ReceiptReceivedListener() {
@@ -135,9 +168,32 @@ public class XMPPConnectionManager implements IncomingChatMessageListener, Stanz
                     Log.d(TAG, fromJid.toString());
                     Log.d(TAG, toJid.toString());
                     Log.d(TAG, "PACKED GOT--" + receiptId);
+                    EventBus.getDefault().post(new ReceiptEvent(fromJid, toJid, receiptId, receipt));
+
                 }
             });
-            DeliveryReceiptManager.getInstanceFor(connection).autoAddDeliveryReceiptRequests();*/
+
+            ChatStateManager.getInstance(connection);
+            DeliveryReceiptManager.getInstanceFor(connection).autoAddDeliveryReceiptRequests();
+            Roster roster = Roster.getInstanceFor(connection);
+            roster.addPresenceEventListener(PresenceManager.getPresenceManager());
+            roster.addRosterListener(PresenceManager.getPresenceManager());
+            roster.addRosterLoadedListener(PresenceManager.getPresenceManager());
+            roster.addSubscribeListener(new SubscribeListener() {
+                @Override
+                public SubscribeAnswer processSubscribe(Jid from, Presence subscribeRequest) {
+                    if (subscribeRequest.getType() == Presence.Type.subscribe) {
+                        return SubscribeAnswer.Approve;
+                    }
+                    return null;
+                }
+            });
+            ServiceDiscoveryManager discoveryManager = ServiceDiscoveryManager.getInstanceFor(connection);;
+            List<String> services =  discoveryManager.getFeatures();
+
+            for(String service:services){
+                Log.d(TAG,service);
+            }
         }
 
         @Override

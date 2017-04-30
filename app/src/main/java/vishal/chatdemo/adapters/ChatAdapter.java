@@ -106,6 +106,9 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
                 case State.SENT:
                     statusView.setText("SENT");
                     break;
+                case State.DELIVERED:
+                    statusView.setText("DELIVERED");
+                    break;
             }
         }
 

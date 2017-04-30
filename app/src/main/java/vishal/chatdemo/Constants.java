@@ -9,12 +9,19 @@ package vishal.chatdemo;
 public class Constants {
 
 
-    public static String USERNAME = "vishal02gaur";
-    public static String FROM = "vishal02gaur@xmpp.jp";
-    public static String TO = "gaur02vishal@xmpp.jp";
 
-    /*public static String USERNAME = "gaur02vishal";
-    public static String FROM = "gaur02vishal@xmpp.jp";
-    public static String TO = "vishal02gaur@xmpp.jp";*/
+    public static final String XMPP_DOMAIN = "VishalGaur";
+    public static final String HOST_IP = "192.168.1.108";
+
+
+/*
+    public static String USERNAME = "abc";
+    public static String FROM = USERNAME+"@"+XMPP_DOMAIN;
+    public static String TO = "gaur@"+XMPP_DOMAIN;*/
+
+    public static String USERNAME = "gaur";
+    public static String FROM = USERNAME+"@"+XMPP_DOMAIN;
+    public static String TO = "vishal@"+XMPP_DOMAIN;
+
 
 }

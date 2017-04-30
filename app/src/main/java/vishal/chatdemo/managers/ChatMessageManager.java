@@ -8,13 +8,20 @@ import org.greenrobot.eventbus.ThreadMode;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.packet.Message;
+import org.jivesoftware.smack.packet.Stanza;
+import org.jivesoftware.smack.roster.Roster;
+import org.jivesoftware.smackx.chatstates.ChatState;
+import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jxmpp.jid.EntityBareJid;
+import org.jxmpp.jid.Jid;
 import org.jxmpp.jid.impl.JidCreate;
 import org.jxmpp.stringprep.XmppStringprepException;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -22,6 +29,7 @@ import vishal.chatdemo.BuildConfig;
 import vishal.chatdemo.Constants;
 import vishal.chatdemo.events.MessageEvent;
 import vishal.chatdemo.State;
+import vishal.chatdemo.events.ReceiptEvent;
 import vishal.chatdemo.messages.MessageObj;
 import vishal.chatdemo.messages.TextMessage;
 import vishal.chatdemo.messages.ext.ImageMessageExt;
@@ -37,6 +45,7 @@ public class ChatMessageManager {
     private static String TAG = ChatMessageManager.class.getSimpleName();
     private BlockingQueue<MessageObj> mMessageObjQueue;
     private List<MessageObj> messageObjList;
+    private Map<String, MessageObj> mSendingMsgMap;
     private Thread thread;
     private static ChatMessageManager messageManager;
 
@@ -49,6 +58,7 @@ public class ChatMessageManager {
     private ChatMessageManager() {
         mMessageObjQueue = new LinkedBlockingQueue<MessageObj>();
         messageObjList = new ArrayList<>();
+        mSendingMsgMap = new HashMap<>();
         thread = new Thread(queueController);
         thread.start();
         EventBus.getDefault().register(this);
@@ -89,6 +99,7 @@ public class ChatMessageManager {
     };
 
     private void handleRequest(MessageObj messageObj) throws XmppStringprepException {
+        mSendingMsgMap.put(messageObj.get_id(), messageObj);
         Message message = new Message();
 
         EntityBareJid _tojid = JidCreate.entityBareFrom(messageObj.get_to());
@@ -102,6 +113,8 @@ public class ChatMessageManager {
         ImageMessageExt imageMessageExt = new ImageMessageExt();
         imageMessageExt.setImageUrl("https://www.android.com/static/2016/img/hero-carousel/android-nougat.png");
         message.addExtension(imageMessageExt);
+        message.addExtension(new ChatStateExtension(ChatState.active));
+
         /*
         TextMessageExtension extension = new TextMessageExtension();
        // ImageMessageExtension imageMessageExt = new ImageMessageExtension();
@@ -113,22 +126,23 @@ public class ChatMessageManager {
             XMPPConnectionManager.getXmppConnectionManager().sendMessage(message);
         } catch (SmackException.NotConnectedException e) {
             e.printStackTrace();
+            mSendingMsgMap.remove(message.getStanzaId());
             EventBus.getDefault().post(new MessageEvent(getObject(message, State.FAILED)));
         } catch (InterruptedException e) {
             e.printStackTrace();
-            getObject(message, State.FAILED);
+            mSendingMsgMap.remove(message.getStanzaId());
             EventBus.getDefault().post(new MessageEvent(getObject(message, State.FAILED)));
         } catch (XMPPException e) {
             e.printStackTrace();
-            getObject(message, State.FAILED);
+            mSendingMsgMap.remove(message.getStanzaId());
             EventBus.getDefault().post(new MessageEvent(getObject(message, State.FAILED)));
         } catch (IOException e) {
             e.printStackTrace();
-            getObject(message, State.FAILED);
+            mSendingMsgMap.remove(message.getStanzaId());
             EventBus.getDefault().post(new MessageEvent(getObject(message, State.FAILED)));
         } catch (SmackException e) {
             e.printStackTrace();
-            getObject(message, State.FAILED);
+            mSendingMsgMap.remove(message.getStanzaId());
             EventBus.getDefault().post(new MessageEvent(getObject(message, State.FAILED)));
         }
     }
@@ -156,10 +170,22 @@ public class ChatMessageManager {
     }
 
     private MessageObj getObject(Message message, int state) {
-        MessageObj messageObj = new TextMessage(message.getStanzaId(), message.getTo().asBareJid().toString(), Constants.FROM, State.SENT, message.getBody(), System.currentTimeMillis());
-        int index = messageObjList.indexOf(messageObj);
-        messageObjList.get(index).setState(state);
+        MessageObj messageObj = mSendingMsgMap.get(message.getStanzaId());
+        messageObj.setState(state);
+        //MessageObj messageObj = new TextMessage(message.getStanzaId(), message.getTo().asBareJid().toString(), Constants.FROM, State.SENT, message.getBody(), System.currentTimeMillis());
+        // int index = messageObjList.indexOf(messageObj);
+        // messageObjList.get(index).setState(state);
         return messageObj;
+    }
+
+    @Subscribe(threadMode = ThreadMode.BACKGROUND)
+    public void onMessageReceiptEvent(ReceiptEvent receiptEvent) {
+        MessageObj messageObj = mSendingMsgMap.get(receiptEvent.getReceiptId());
+        mSendingMsgMap.remove(receiptEvent.getReceiptId());
+        if (messageObj != null) {
+            messageObj.setState(State.DELIVERED);
+            EventBus.getDefault().post(new MessageEvent(messageObj));
+        }
     }
 
 }
